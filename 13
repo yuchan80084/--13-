@@ -1,0 +1,189 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <limits.h>
+
+#define INF INT_MAX
+
+void printMatrix(int** graph, int nodes) {
+    printf("Current adjacency matrix:\n");
+    for (int i = 0; i < nodes; i++) {
+        for (int j = 0; j < nodes; j++) {
+            if (graph[i][j] == INF)
+                printf("INF\t");
+            else
+                printf("%d\t", graph[i][j]);
+        }
+        printf("\n");
+    }
+}
+
+int selectMinVertex(int distance[], int if1_cloud[], int nodes) {
+    int min = INF;
+    int minIndex = -1;
+    for (int i = 0; i < nodes; i++) {
+        if (!if1_cloud[i] && (distance[i] < min)) {
+            min = distance[i];
+            minIndex = i;
+        }
+    }
+    return minIndex;
+}
+
+void printPath(int previous[], int node) {
+    if (node == -1) return;
+    printPath(previous, previous[node]);
+    printf("%d ", node);
+}
+
+void dijkstra(int** graph, int nodes, int start) {
+    int* distance = (int*)malloc(nodes * sizeof(int));
+    int* if1_cloud = (int*)malloc(nodes * sizeof(int));
+    int* previous = (int*)malloc(nodes * sizeof(int));
+
+    if (distance == NULL || if1_cloud == NULL || previous == NULL) {
+        printf("Memory allocation failed.\n");
+        free(distance);
+        free(if1_cloud);
+        free(previous);
+        exit(1);
+    }
+
+    for (int i = 0; i < nodes; i++) {
+        distance[i] = INF;
+        if1_cloud[i] = 0;
+        previous[i] = -1;
+    }
+    distance[start] = 0;
+
+    for (int i = 0; i < nodes; i++) {
+        int u = selectMinVertex(distance, if1_cloud, nodes);
+        if (u == -1) break;
+        if1_cloud[u] = 1;
+
+        for (int v = 0; v < nodes; v++) {
+            if ((graph[u][v] != INF) && !if1_cloud[v] && (distance[u] + graph[u][v] < distance[v])) {
+                distance[v] = distance[u] + graph[u][v];
+                previous[v] = u;
+            }
+        }
+    }
+
+    printf("Node\tDistance\tPath\n");
+    for (int i = 0; i < nodes; i++) {
+        printf("%d\t", i);
+        if (distance[i] == INF) {
+            printf("INF\t\tNo Path\n");
+        }
+        else {
+            printf("%d\t\t", distance[i]);
+            printPath(previous, i);
+            printf("\n");
+        }
+    }
+
+    free(distance);
+    free(if1_cloud);
+    free(previous);
+}
+
+int main() {
+    int nodes, isUndirected;
+
+    printf("노드의 수를 입력하세요: ");
+    scanf_s("%d", &nodes);
+    printf("graph가 undirected한가요? (1 for Yes, 0 for No): ");
+    scanf_s("%d", &isUndirected);
+
+    int** graph = (int**)malloc(nodes * sizeof(int*));
+    if (graph == NULL) {
+        printf("graph pointers에 대한 메모리 할당 실패.\n");
+        return 1;
+    }
+
+    for (int i = 0; i < nodes; i++) {
+        graph[i] = (int*)malloc(nodes * sizeof(int));
+        if (graph[i] == NULL) {
+            printf("graph[%d]대한 메모리 할당 실패.\n", i);
+            for (int j = 0; j < i; j++) {
+                free(graph[j]);
+            }
+            free(graph);
+            return 1;
+        }
+
+        for (int j = 0; j < nodes; j++) {
+            graph[i][j] = INF;
+        }
+    }
+
+    printf("adjacency matrix를 입력하세요(row index가 출발노드, column index가 도착노드)\n(노드간 edge로 연결되지 않았다면 'inf'를 입력, 동일 노드간의 weight은 0을 입력):\n");
+
+    if (isUndirected) {
+        for (int i = 0; i < nodes; i++) {
+            for (int j = i; j < nodes; j++) {
+                char input[10];
+                do {
+                    printf("Enter value for graph[%d][%d]: ", i, j);
+                    scanf_s("%s", input, (unsigned)_countof(input));
+                    if (strcmp(input, "inf") == 0 || strcmp(input, "INF") == 0) {
+                        graph[i][j] = INF;
+                        break;
+                    }
+                    else {
+                        graph[i][j] = atoi(input);
+                        if (graph[i][j] < 0) {
+                            printf("Error: Weight 값으로 양수를 입력해 주세요.\n");
+                        }
+                    }
+                } while (graph[i][j] < 0);
+                graph[j][i] = graph[i][j];
+                printMatrix(graph, nodes);
+            }
+        }
+    }
+    else {
+        for (int i = 0; i < nodes; i++) {
+            for (int j = 0; j < nodes; j++) {
+                char input[10];
+                do {
+                    printf("Enter value for graph[%d][%d]: ", i, j);
+                    scanf_s("%s", input, (unsigned)_countof(input));
+                    if (strcmp(input, "inf") == 0 || strcmp(input, "INF") == 0) {
+                        graph[i][j] = INF;
+                        break;
+                    }
+                    else {
+                        graph[i][j] = atoi(input);
+                        if (graph[i][j] < 0) {
+                            printf("Error: Weight 값으로 양수를 입력해 주세요.\n");
+                        }
+                    }
+                } while (graph[i][j] < 0);
+                printMatrix(graph, nodes);
+            }
+        }
+    }
+
+    int start;
+    printf("시작 노드를 입력하세요. (0 to %d): ", nodes - 1);
+    scanf_s("%d", &start);
+
+    if (start < 0 || start >= nodes) {
+        printf("시작노드가 잘못되었습니다. 0에서 %d사이의 값을 입력하십시오.\n", nodes - 1);
+        for (int i = 0; i < nodes; i++) {
+            free(graph[i]);
+        }
+        free(graph);
+        return 1;
+    }
+
+    dijkstra(graph, nodes, start);
+
+    for (int i = 0; i < nodes; i++) {
+        free(graph[i]);
+    }
+    free(graph);
+
+    return 0;
+}
